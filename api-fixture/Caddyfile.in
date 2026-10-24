@@ -1,0 +1,83 @@
+{
+    admin off
+    auto_https off
+    persist_config off
+    ocsp_stapling off
+    grace_period 1s
+    servers {
+        protocols h1 h2
+        timeouts {
+            read_header 5s
+            read_body 5s
+            write 5s
+            idle 10s
+        }
+        max_header_size 16KB
+    }
+}
+
+# Exact source peers, never forwarded header claims. No proxy or filesystem handler exists.
+https://:18445 {
+    @@BIND@@
+    tls "@@CERT@@" "@@KEY@@"
+    @admitted remote_ip @@ALLOW@@
+    handle @admitted {
+        @json {
+            method GET HEAD
+            path / /api/v1
+        }
+        handle @json {
+            header Content-Type application/json
+            header Cache-Control no-store
+            respond `{"fixture":"owned-qa-api","quota_advertised":false,"enforcement_tested":false}` 200
+        }
+        @known path / /api/v1
+        handle @known {
+            header Allow "GET, HEAD"
+            respond `{"error":"method not allowed"}` 405
+        }
+        handle {
+            header Content-Type application/json
+            respond `{"error":"not found"}` 404
+        }
+    }
+    handle {
+        header Content-Type application/json
+        respond `{"error":"source forbidden"}` 403
+    }
+}
+
+https://:18446 {
+    @@BIND@@
+    tls "@@CERT@@" "@@KEY@@"
+    @admitted remote_ip @@ALLOW@@
+    handle @admitted {
+        @json {
+            method GET HEAD
+            path / /api/v1
+        }
+        handle @json {
+            header {
+                Content-Type application/json
+                Cache-Control no-store
+                RateLimit-Limit 100
+                RateLimit-Remaining 99
+                RateLimit-Reset 60
+            }
+            respond `{"fixture":"owned-qa-api","quota_advertised":true,"enforcement_tested":false}` 200
+        }
+        @known path / /api/v1
+        handle @known {
+            header Allow "GET, HEAD"
+            respond `{"error":"method not allowed"}` 405
+        }
+        handle {
+            header Content-Type application/json
+            respond `{"error":"not found"}` 404
+        }
+    }
+    handle {
+        header Content-Type application/json
+        respond `{"error":"source forbidden"}` 403
+    }
+}

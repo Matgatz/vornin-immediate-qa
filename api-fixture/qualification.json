@@ -1,0 +1,43 @@
+{
+  "status": "qualified-in-isolated-Linux-only",
+  "networkInterfaces": [
+    "lo"
+  ],
+  "caddySha256": "78ce36f1bee55a4c0a99c49842d89cebef4b4007f0fb30ad2078e1d3120e130f",
+  "checks": [
+    "strict-exact-source-parser:9-invalid-inputs-refused",
+    "adapted-config:admin-off-autoHTTPS-off-exact-ports-explicit-cert-no-proxy-no-file-server-no-h3",
+    "actual-HTTPS:both-root-and-api-v1-200-JSON",
+    "actual-HTTPS:18445-no-quota-headers-18446-advertisement-only",
+    "actual-HTTPS:unknown-paths-404-no-soft404",
+    "actual-HTTPS:HEAD-supported-POST405-no-mutation",
+    "actual-HTTPS:forbidden-source403-even-with-spoofed-XFF",
+    "process-boundary:reused-PID-refused-admin-port-absent",
+    "exact-standalone-process-stopped-no-service-operation"
+  ],
+  "productionListenersStarted": false,
+  "firewallChanges": false,
+  "rateEnforcementTested": false,
+  "qualifiedAt": "2026-10-24T12:20:15.862674+00:00",
+  "caddyVersion": "v2.11.2",
+  "caddyProvenance": "Existing installed /usr/bin/caddy read-only version/hash inspection; trusted binary copied only into ignored .validation for isolated Linux tests.",
+  "runtimeImage": "python:3.14-slim-bookworm@sha256:945c2676dc2b18e0c1f16879244122c57c0ffede60006bf3df159c507a31bcae",
+  "sourceSha256": {
+    ".gitignore": "ef8b732909b549b306014faed2dbe6f17a6ff0d08bcb13d222d91ac8aa5b4522",
+    "Caddyfile.in": "0f21918a4cf67b8faf2f0b4fee92f152a22a24fb30ab4241bd32612e0f6ac52f",
+    "generate.py": "cbe55871eaa53d8d853ef20a9b2e7951f559322733171431b003518098bf0ce1",
+    "manage.py": "7c8867c05a432d2cc3d3e73ce3c352d1579118296b372d0219edd7fdb1347202",
+    "validate.py": "e0b2b3863c33f8ef744084d7204f08435ee55a29dd21dac8897a15c8f54476a4",
+    "validate_linux.sh": "4b019c52bc61b1124c5a7b394e6630db08d12958a02dccb1e740c255026fffe5",
+    "README.md": "1ac4eb1e2a7e9ab1ab92dabf3c5ee0cf74f06518fbf62ef5a1ad48b6e4e496af"
+  },
+  "appSourceChanged": false,
+  "readyForProduction": false,
+  "pending": [
+    "Parent and invariant review",
+    "Publish exact reviewed committed QA repository artifact",
+    "Independently check actual runtime single fleet/home addresses",
+    "Explicit parent-only listener and firewall admission",
+    "Fresh independent responder probes and scanner production results"
+  ]
+}
