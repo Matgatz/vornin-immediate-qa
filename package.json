@@ -1,0 +1,8 @@
+{
+  "name": "vornin-owned-engine-qualification",
+  "version": "1.0.0",
+  "private": true,
+  "dependencies": {
+    "vornin-qualification-parent": "1.0.0"
+  }
+}
