@@ -1,0 +1,33 @@
+apiVersion: v1
+kind: Pod
+metadata:
+  name: vornin-owned-static-qualification
+  namespace: qualification
+  labels:
+    app: owned-qualification
+spec:
+  hostPID: false
+  hostIPC: false
+  hostNetwork: false
+  automountServiceAccountToken: false
+  securityContext:
+    runAsNonRoot: true
+    runAsUser: 10001
+    seccompProfile:
+      type: RuntimeDefault
+  containers:
+    - name: fixture
+      image: alpine:3.22
+      securityContext:
+        privileged: false
+        allowPrivilegeEscalation: false
+        readOnlyRootFilesystem: true
+        capabilities:
+          drop: [ALL]
+      resources:
+        requests:
+          cpu: 10m
+          memory: 16Mi
+        limits:
+          cpu: 100m
+          memory: 32Mi
