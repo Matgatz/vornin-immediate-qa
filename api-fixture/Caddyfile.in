@@ -17,9 +17,8 @@
 }
 
 # Exact source peers, never forwarded header claims. No proxy or filesystem handler exists.
-https://:18445 {
+http://:18445 {
     @@BIND@@
-    tls "@@CERT@@" "@@KEY@@"
     @admitted remote_ip @@ALLOW@@
     handle @admitted {
         @json {
@@ -47,9 +46,8 @@ https://:18445 {
     }
 }
 
-https://:18446 {
+http://:18446 {
     @@BIND@@
-    tls "@@CERT@@" "@@KEY@@"
     @admitted remote_ip @@ALLOW@@
     handle @admitted {
         @json {

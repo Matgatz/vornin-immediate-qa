@@ -1,16 +1,24 @@
 #!/usr/bin/env python3
-"""Bounded real Caddy HTTPS validation; refuses any network namespace with a non-loopback interface."""
+"""Bounded real Caddy plaintext HTTP validation; refuses any network namespace with a non-loopback interface."""
 import argparse, hashlib, http.client, json, os, socket, ssl, subprocess, tempfile, time
 from pathlib import Path
 from generate import CADDY_SHA256, create, isolated, source_address
 from manage import start, stop, verify_process
 
 def request(port,path,method='GET',source='127.0.0.1',spoof=False):
-    c=http.client.HTTPSConnection('127.0.0.1',port,context=ssl._create_unverified_context(),timeout=3,source_address=(source,0))
+    c=http.client.HTTPConnection('127.0.0.1',port,timeout=3,source_address=(source,0))
     try:
         c.request(method,path,headers={'X-Forwarded-For':'127.0.0.1'} if spoof else {})
         r=c.getresponse();return r.status,{k.lower():v for k,v in r.getheaders()},r.read(2048)
     finally:c.close()
+
+def tls_refused(port):
+    # Negative control: an unverifying client so that ANY TLS listener would complete and fail this check.
+    c=ssl.SSLContext(ssl.PROTOCOL_TLS_CLIENT);c.check_hostname=False;c.verify_mode=ssl.CERT_NONE
+    with socket.create_connection(('127.0.0.1',port),timeout=3) as s:
+        try:c.wrap_socket(s,server_hostname='qa-api.fixture.invalid').close()
+        except (ssl.SSLError,OSError):return True
+    raise AssertionError('TLS handshake completed on plaintext QA API port')
 
 def main():
     p=argparse.ArgumentParser();p.add_argument('--caddy',required=True);a=p.parse_args()
@@ -39,8 +47,9 @@ def main():
             elif isinstance(x,list):
                 for v in x:yield from handlers(v)
         assert set(handlers(config))<={'subroute','static_response','headers'}
-        assert 'load_files' in config['apps']['tls']['certificates']
-        checks.append('adapted-config:admin-off-autoHTTPS-off-exact-ports-explicit-cert-no-proxy-no-file-server-no-h3')
+        # The unchanged global 'ocsp_stapling off' still emits an apps.tls automation stub; it must hold no certificates.
+        assert 'certificates' not in config['apps'].get('tls',{}) and all(not s.get('tls_connection_policies') for s in servers.values()),'Plaintext build must load no certificate and no TLS connection policy'
+        checks.append('adapted-config:admin-off-autoHTTPS-off-exact-ports-no-certificate-no-TLS-policy-no-proxy-no-file-server-no-h3')
         proc=start(state,str(caddy),True)
         try:
             deadline=time.monotonic()+5
@@ -54,6 +63,7 @@ def main():
             for port in (18445,18446):
                 for path in ('/','/api/v1'):
                     status,headers,body=request(port,path);assert status==200 and headers.get('content-type')=='application/json'
+                    assert 'strict-transport-security' not in headers and 'location' not in headers
                     payload=json.loads(body);assert payload['enforcement_tested'] is False and payload['quota_advertised']==(port==18446)
                     if port==18445:assert not any(k.startswith('ratelimit') or k.startswith('x-ratelimit') for k in headers)
                     else:assert [headers.get(k) for k in ('ratelimit-limit','ratelimit-remaining','ratelimit-reset')]==['100','99','60']
@@ -62,7 +72,8 @@ def main():
                 assert request(port,'/','HEAD')[0]==200
                 status,headers,body=request(port,'/api/v1','POST');assert status==405 and headers['allow']=='GET, HEAD'
                 assert request(port,'/api/v1',source='127.0.0.2',spoof=True)[0]==403
-            checks+=['actual-HTTPS:both-root-and-api-v1-200-JSON','actual-HTTPS:18445-no-quota-headers-18446-advertisement-only','actual-HTTPS:unknown-paths-404-no-soft404','actual-HTTPS:HEAD-supported-POST405-no-mutation','actual-HTTPS:forbidden-source403-even-with-spoofed-XFF']
+                assert tls_refused(port)
+            checks+=['actual-HTTP:both-root-and-api-v1-200-JSON','actual-HTTP:18445-no-quota-headers-18446-advertisement-only','actual-HTTP:unknown-paths-404-no-soft404','actual-HTTP:HEAD-supported-POST405-no-mutation','actual-HTTP:forbidden-source403-even-with-spoofed-XFF','plaintext-only:TLS-handshake-refused-no-HSTS-no-redirect']
             record=json.loads((state/'process.json').read_text());wrong=dict(record,startTicks='0')
             try:verify_process(state,wrong)
             except ValueError:pass
